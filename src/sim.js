@@ -59,13 +59,13 @@ function ropePaths(hL, hR) {
 }
 function ropeSide(s, h) {
   const zL = LOWER_Z0 + h;                    // 이쪽 줄이 받치는 하유량 높이
-  const arcN = 8, pts = [[0, 0, HAM_Z + 16], [0, 0, zL]];   // 함환 고리(3,667~3,677)에 묶인 끝
+  const arcN = 8, pts = [[s * 120, 0, HAM_Z + 16], [s * 120, 0, zL]];   // 함환 고리(지름 300) x=±120에 묶인 끝 → 8가닥이 240 간격
   const under = cx => { for (let i = 1; i <= arcN; i++) { const th = Math.PI + Math.PI * i / arcN; pts.push([cx + s * R_PULLEY * Math.cos(th), 0, zL + R_PULLEY * Math.sin(th)]); } };
   const over = cx => { for (let i = 1; i <= arcN; i++) { const th = Math.PI - Math.PI * i / arcN; pts.push([cx + s * R_PULLEY * Math.cos(th), 0, UPPER_Z + R_PULLEY * Math.sin(th)]); } };
-  under(s * 120);                                             // 0 → s·240 (밑 반바퀴)
-  over(s * 360);                                              // s·240 → s·480 (위 반바퀴)
-  pts.push([s * 480, 0, zL]); under(s * 600);                 // s·480 → s·720 (밑 반바퀴)
-  over(s * 840);                                              // s·720 → s·960 (위 반바퀴)
+  under(s * 240);                                             // s·120 → s·360 (밑 반바퀴)
+  over(s * 480);                                              // s·360 → s·600 (위 반바퀴)
+  pts.push([s * 600, 0, zL]); under(s * 720);                 // s·600 → s·840 (밑 반바퀴)
+  over(s * 960);                                              // s·840 → s·1,080 (위 반바퀴)
   // 바깥쪽으로 비스듬히 대활륜(왼쪽 150° 접점)으로
   const c0 = [BIG.x * s + R_BIG * Math.cos(150 * Math.PI / 180), 0, BIG.z + R_BIG * Math.sin(150 * Math.PI / 180)];
   const o0 = pts[pts.length - 1];

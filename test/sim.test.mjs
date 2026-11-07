@@ -235,8 +235,17 @@ test('F4: 쇠사슬 2가닥(고리)과 철강 2개 부재가 있다', async t =>
   assert.ok(labels.filter(l => l.includes('쇠사슬 오른쪽')).length === 1);
   assert.ok(labels.some(l => l.includes('철강 2개')));
   const chain = steps.flatMap(s => s.members).find(m => m.label.includes('쇠사슬 왼쪽'));
-  // 사슬 고리는 모두 돌(x ±450) 바깥에 있어야 함: 고리 중심 |x| − 고리 반지름 35 > 450
-  const xs = chain.node.c.map(r => Math.abs(r.a.M[3]));
-  assert.ok(xs.every(x => x - 35 > 450), 'chain links intersect stone');
+  // 사슬 고리는 모두 돌(y ±300) 바깥에 있어야 함: 고리 중심 |y| − 고리 반지름 35 > 300
+  const ys = chain.node.c.map(r => Math.abs(r.a.M[7]));
+  assert.ok(ys.every(y => y - 35 > 300), 'chain links intersect stone');
   assert.equal(chain.node.op, 'uni');                   // 고리(링) 이어 붙이기
+});
+
+test('밧줄 세로 8가닥이 서로 겹치지 않고 고른 간격(240)으로 내려온다', () => {
+  const st = crane({ thL: 5, thR: 5 });
+  const xs = [];
+  for (const k of ['L', 'R']) { const P = st.ropePath[k];
+    for (let i = 1; i < P.length; i++) if (Math.abs(P[i][0] - P[i - 1][0]) < 20 && Math.abs(P[i][2] - P[i - 1][2]) > 500) xs.push(Math.round((P[i][2] < P[i - 1][2] ? P[i] : P[i - 1])[0])); }
+  xs.sort((a, b) => a - b);
+  assert.deepEqual(xs, [-840, -600, -360, -120, 120, 360, 600, 840]);
 });
