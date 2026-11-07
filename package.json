@@ -1,0 +1,19 @@
+{
+  "name": "geojunggi-3d",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "거중기(擧重機) 3D 교육 웹앱 — 정약용의 기중기",
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/"
+  },
+  "dependencies": {
+    "three": "0.160.0",
+    "three-bvh-csg": "0.0.16",
+    "three-mesh-bvh": "0.7.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.0"
+  }
+}

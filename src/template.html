@@ -1,0 +1,168 @@
+<title>거중기 3D — 정약용의 기중기</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#ece5d3;--fg:#2b2620;--pn:#fbf7ee;--ac:#9e2f1e;--bd:#d4c7ab;--mut:#6d6253;--sky1:#d7e3e6;--sky2:#ece5d3;--ok:#3d7a4a;--warnb:#c05a1e;
+ --fd:"Gowun Batang","Noto Serif KR",serif;--fb:"Noto Sans KR",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1a17;--fg:#ede6d8;--pn:#27231f;--ac:#d0614a;--bd:#443c33;--mut:#a89c8a;--sky1:#2b3a44;--sky2:#1c1a17;--ok:#6aa878;--warnb:#e08a4a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1c1a17;--fg:#ede6d8;--pn:#27231f;--ac:#d0614a;--bd:#443c33;--mut:#a89c8a;--sky1:#2b3a44;--sky2:#1c1a17;--ok:#6aa878;--warnb:#e08a4a;color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font:14px/1.55 var(--fb);display:flex;flex-direction:column;margin:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
+header{padding-block:10px 8px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+header h1{font:700 20px/1.2 var(--fd);margin:0;letter-spacing:.02em}
+header span{color:var(--mut);font-size:12.5px}
+main{flex:1;min-height:0;display:flex;gap:12px;padding-bottom:12px}
+#cv{flex:1;min-width:0;position:relative;border-radius:12px;overflow:hidden;background:linear-gradient(var(--sky1),var(--sky2))}
+#cv canvas{display:block;touch-action:none;cursor:grab}
+#ld{position:absolute;left:12px;bottom:12px;background:var(--pn);border:1px solid var(--bd);border-radius:8px;padding:6px 10px;font-size:12.5px}
+.tl{position:absolute;top:10px;display:flex;gap:4px}
+#tabs{left:10px;flex-wrap:wrap;max-width:calc(100% - 130px)}
+#tabs button{font-weight:500}
+#tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+#zoom{right:10px;flex-direction:column}#zoom button{min-width:38px;min-height:34px;font-size:16px;display:grid;place-items:center}
+#cap{position:absolute;left:50%;top:12px;transform:translateX(-50%);background:var(--fg);color:var(--bg);border-radius:10px;padding:6px 14px;font-weight:700;font-size:13.5px;max-width:calc(100% - 300px);text-align:center;pointer-events:none}
+#cap[hidden],#mvhint[hidden],#now[hidden],#warn[hidden]{display:none}
+#now{position:absolute;left:12px;top:52px;background:var(--pn);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;max-width:min(430px,calc(100% - 80px));font-size:13px;box-shadow:0 2px 10px #0002}
+#now .t{font:700 15px var(--fd);margin-bottom:2px}#now b{color:var(--ac)}
+#now .st{display:inline-block;background:var(--ac);color:#fff;border-radius:6px;padding:0 6px;margin-right:6px;font-size:12px}
+#mvhint{position:absolute;right:62px;bottom:12px;font-size:12px;color:var(--mut);background:var(--pn);border:1px solid var(--bd);border-radius:8px;padding:5px 9px;max-width:calc(100% - 330px);opacity:.92}
+#ghostb.on,#moveb.on{background:var(--ac);border-color:var(--ac);color:#fff}
+aside{width:350px;display:flex;flex-direction:column;gap:8px;min-height:0;overflow-y:auto}
+.box{background:var(--pn);border:1px solid var(--bd);border-radius:12px;padding:10px}
+.box>b{font:700 15px var(--fd)}
+.row{display:flex;gap:6px;align-items:center;font-size:12.5px;margin-top:8px;flex-wrap:wrap}
+.row input[type=range]{flex:1;min-width:80px;accent-color:var(--ac)}
+.lb{color:var(--mut);min-width:52px}
+.k{font-size:11.5px;color:var(--mut)}
+button,select{font:inherit;font-size:13px;background:var(--pn);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:4px 9px;cursor:pointer}
+button:focus-visible,select:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:disabled{opacity:.45;cursor:default}
+#list button{font-size:12px;padding:2px 7px}
+i.sw{width:13px;height:13px;border-radius:3px;flex:none;border:1px solid #0003}
+#ctl{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+#ctl input[type=range]{flex:1;min-width:90px;accent-color:var(--ac)}
+#cn{font-variant-numeric:tabular-nums;min-width:56px;text-align:right;font-size:13px}
+#info{flex:0 0 auto}
+#info h2{margin:0 0 4px;font:700 17px/1.3 var(--fd);text-wrap:balance}
+#info h2 small{font:500 12px var(--fb);color:var(--mut)}
+.gn{font-size:11.5px;letter-spacing:.06em;color:var(--ac);font-weight:700}
+#info .d{font-size:13px}
+#info .m{font-size:12px;color:var(--mut);margin-top:6px}
+#list{flex:1 0 auto;min-height:90px}
+.gh{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;margin:8px 0 3px}
+.gh:first-child{margin-top:0}.gh small{font-weight:400;color:var(--mut)}
+.gs{display:flex;flex-wrap:wrap;gap:3px;margin-left:20px}
+#vm{display:flex;gap:4px;flex-wrap:wrap}
+.reads{display:grid;grid-template-columns:1fr 1fr;gap:3px 14px;margin-top:8px;font-size:12.5px}
+.reads b{font-variant-numeric:tabular-nums;float:right;font-weight:700}
+#warn{margin-top:8px;border:1px solid var(--warnb);color:var(--warnb);border-radius:8px;padding:5px 9px;font-size:12.5px;font-weight:700}
+#scibox .d,#marsbox .d{font-size:13px;color:var(--mut);margin-top:4px}
+#sciCards{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.sci{border:1px solid var(--bd);border-radius:10px;padding:8px 10px;background:var(--bg);cursor:pointer}
+.sci.on{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+.sci h3{margin:0;font:700 14.5px var(--fd)}
+.sci .fx{font-size:12.5px;color:var(--ac);font-weight:700;margin-top:2px}
+.sci .tx{font-size:12.5px;margin-top:3px}
+.sci svg{display:block;width:100%;height:auto;margin-top:4px}
+.tbl{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+.tbl th,.tbl td{border:1px solid var(--bd);padding:3px 5px;text-align:left;vertical-align:top}
+.tbl th{background:var(--bg);font-weight:700;white-space:nowrap}
+.as{color:var(--mut);font-size:10px;border:1px solid var(--bd);border-radius:4px;padding:0 3px;margin-left:4px;white-space:nowrap}
+.tblwrap{overflow-x:auto;max-width:100%}
+.srcs{font-size:11.5px;line-height:1.7;margin-top:6px;word-break:break-all}
+#srcbox summary{cursor:pointer;font:700 15px var(--fd)}
+#quizbox .qq{margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)}
+#quizbox .qq .ch{display:flex;flex-direction:column;gap:3px;margin-top:5px}
+#quizbox .qq .ch button{text-align:left;font-size:12.5px}
+#quizbox .qq .ch button.ok{border-color:var(--ok);color:var(--ok);font-weight:700}
+#quizbox .qq .ch button.no{border-color:var(--warnb);color:var(--warnb)}
+#quizbox .qq .ex{font-size:12px;color:var(--mut);margin-top:4px}
+#ctl2{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+#mSl{width:100%;accent-color:var(--ac);margin-top:6px}
+[hidden]{display:none!important}
+@media (max-width:760px){html,body{overflow-x:hidden}#mvhint{left:12px;max-width:none}#cap{max-width:calc(100% - 70px)}main{flex-direction:column}aside{width:auto;flex:0 0 auto;max-height:none}#cv{min-height:55vh;flex:0 0 55vh}#mvhint{display:none!important}#now{top:auto;bottom:10px;left:10px;max-width:calc(100% - 70px);padding:5px 9px;font-size:12px}#now p,#now .d{display:none}#tabs{max-width:calc(100% - 96px)}}
+#lite{position:absolute;right:62px;bottom:12px;background:var(--pn);border:1px solid var(--bd);border-radius:8px;padding:3px 9px;font-size:12px;color:var(--mut)}
+#lite[hidden]{display:none}
+</style>
+<header><h1>거중기(擧重機) 3D — 정약용의 기중기</h1><span>드래그: 돌려 보기 · 휠/＋－: 확대 · 오른쪽 드래그(또는 Shift+드래그): 옮겨 보기 · Ctrl(⌘)+끌기: 부재 떼어 보기</span></header>
+<main>
+<div id="cv">
+ <div class="tl" id="tabs"><button id="tBuild" class="on">시공 순서</button><button id="tSci">과학 원리</button><button id="tCtrl">직접 조작</button><button id="tMars">화성 현장</button></div>
+ <div class="tl" id="zoom"><button id="zi" aria-label="확대">＋</button><button id="zo" aria-label="축소">－</button><button id="ghostb" aria-label="반투명 켜기/끄기" aria-pressed="false" title="반투명: 모든 부재를 비쳐 보이게 합니다"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M9 2a7 7 0 0 1 0 14z" fill="currentColor"/></svg></button><button id="moveb" aria-label="부재 옮겨 보기 (터치용)" aria-pressed="false" title="부재 옮겨 보기: 켜면 Ctrl 없이 부재를 끌 수 있어요">✋</button></div>
+ <div id="cap" hidden></div>
+ <div id="now" hidden><div class="t"></div><div class="d"></div></div>
+ <div id="mvhint">Ctrl(⌘)을 누른 채 부재를 끌어 떼어 보세요 · 놓으면 제자리로</div>
+ <div id="ld">불러오는 중…</div>
+ <div id="lite" hidden title="화면이 느려 그림자를 끄고 해상도를 낮췄습니다">가벼운 모드</div>
+</div>
+<aside>
+ <div class="box" id="buildbox">
+  <div id="ctl"><button id="bp" aria-label="이전">◀</button><button id="bn" aria-label="다음">▶</button><button id="pl">▶ 재생</button><input id="sl" type="range" min="0" value="0" aria-label="시공 단계"><span id="cn"></span></div>
+  <div class="row"><span class="lb">재생 속도</span><select id="spd"><option value="4000">아주 느리게</option><option value="2200">느리게</option><option value="1300" selected>보통</option><option value="650">빠르게</option></select><button id="all">완성 모습</button><label><input id="edg" type="checkbox" checked> 윤곽선</label></div>
+  <div class="row"><span class="lb">보기</span><div id="vm"><button data-m="all" class="on">전체</button><button data-m="ghost">반투명</button><button data-m="solo">현재 부재만</button></div></div>
+ </div>
+ <div class="box" id="info" hidden></div>
+ <div class="box" id="list" hidden></div>
+ <div class="box" id="scibox" hidden><b>과학 원리</b><div class="d">카드를 고르면 그림이 바뀌고 3D에서 해당 부재를 보여 줍니다.</div><div id="sciCards"></div></div>
+ <div class="box" id="ctrlbox" hidden>
+  <b>직접 조작 — 얼레를 돌려 돌을 들어 올려 보세요</b>
+  <div class="row"><span class="lb">왼쪽 얼레</span><button id="wLu" title="누르고 있으면 감습니다 (키보드 Q)">▲ 감기</button><button id="wLd" title="누르고 있으면 풉니다 (키보드 A)">▼ 풀기</button></div>
+  <div class="row"><span class="lb">오른쪽 얼레</span><button id="wRu" title="누르고 있으면 감습니다 (키보드 P)">▲ 감기</button><button id="wRd" title="누르고 있으면 풉니다 (키보드 L)">▼ 풀기</button></div>
+  <div class="row"><span class="lb">양쪽 함께</span><button id="wBu" title="누르고 있으면 감습니다 (키보드 W)">▲ 감기</button><button id="wBd" title="누르고 있으면 풉니다 (키보드 S)">▼ 풀기</button><span class="k">키: Q/A 왼쪽 · P/L 오른쪽 · W/S 함께</span></div>
+  <div class="row"><span class="lb">돌 무게</span><input id="wsl" type="range" min="0.3" max="7.2" step="0.01" value="0.73" aria-label="돌 무게(톤)"><span id="wsv" class="k">0.73t</span></div>
+  <div class="row"><span class="lb">한쪽 일꾼</span><input id="nws" type="range" min="1" max="15" step="1" value="8" aria-label="한쪽 일꾼 수"><span id="nwv" class="k">8명</span></div>
+  <div class="row"><span class="lb">효율</span><input id="efs" type="range" min="60" max="100" step="1" value="100" aria-label="마찰 효율"><span id="efv" class="k">100%</span></div>
+  <div class="reads">
+   <div>들린 높이 <b id="rh">0.00m</b></div><div>기울기 <b id="rt">0.0°</b></div>
+   <div>줄 1가닥 장력 <b id="rf">0N</b></div><div>1인당 힘 <b id="rp">—</b></div>
+   <div>감은 밧줄 <b id="rr">0.0m</b></div><div>한 일 <b id="rw">0J</b></div>
+  </div>
+  <div id="warn" hidden></div>
+  <div class="row"><label><input id="snd" type="checkbox" checked> 소리</label><span class="k">얼레 삐걱 · 돌 내려앉을 때 쿵</span></div>
+ </div>
+ <div class="box" id="marsbox" hidden><b>화성 현장 — 돌을 유형거(수레)에 싣는 장면</b>
+  <div class="d" id="marsCap">▶를 누르면 장면이 재생됩니다. 성벽·녹로 화살표가 함께 보입니다.</div>
+  <div id="ctl2"><button id="mPlay">▶ 재생</button><button id="mReset">⟲ 처음부터</button><select id="mSpd" aria-label="재생 속도"><option value="0.5">0.5배속</option><option value="1" selected>1배속</option><option value="2">2배속</option></select><span id="mPh" class="k"></span></div>
+  <input id="mSl" type="range" min="0" max="600" value="0" step="1" aria-label="장면 시간">
+  <div style="border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-top:8px;background:var(--bg)"><b style="font:700 14.5px var(--fd)">「거중기는 성벽을 쌓았을까?」</b><div style="font-size:12.5px;margin-top:4px">거중기는 높이 약 4.4m에 들어 올릴 수 있는 높이가 약 3m이고 바퀴가 없어 옮기기 어려웠습니다. 그래서 "성벽에 돌을 올린 크레인"이 아니라 <b>채석장 등에서 돌을 수레에 싣는 고정식 기중기</b>였다는 해석이 유력합니다(Kim 2017). 성벽을 높이 쌓을 때는 높이 약 11m의 <b>녹로(轆轤)</b>를 썼고, 화성에는 거중기 1·녹로 2가 기록되어 있습니다(『화성성역의궤』). "거중기 11대"라는 기사는 유형거(11량)와의 혼동으로 보입니다 — 자료마다 다릅니다.</div></div>
+ </div>
+ <div class="row" style="justify-content:center"><button id="quizb" style="width:100%">문제 풀기</button></div>
+ <div class="box" id="quizbox" hidden></div>
+ <details class="box" id="srcbox"><summary>치수와 자료의 출처</summary>
+  <div class="tblwrap"><table class="tbl">
+   <tr><th>부재</th><th>한자</th><th>수량</th><th>치수·설명</th><th>근거</th></tr>
+   <tr><td>정체</td><td>定體</td><td>1</td><td>가운데 틀 전체</td><td>의궤</td></tr>
+   <tr><td>승량각(다리)</td><td>承樑脚</td><td>4</td><td>길이 14척 = 4,242</td><td>의궤(위키원)</td></tr>
+   <tr><td>전후강·좌우강</td><td>前後杠·左右杠</td><td>각 2(×2단)</td><td>다리를 앞뒤·좌우로 엮는 가로대, 나무쐐기로 고정(약 4자 높이)</td><td>의궤·매일신문</td></tr>
+   <tr><td>횡량</td><td>橫樑</td><td>1</td><td>꼭대기 가로보. 괘정(걸쇠) 앞뒤 2개씩 → 승량각에 걸어 고정, 늑철 4</td><td>의궤</td></tr>
+   <tr><td>중유량(위 도르래틀, 고정)</td><td>中遊樑</td><td>1</td><td>도르래(활차) 4개를 등자쇠(등철) 4개가 물고 있음, 함환(銜環)·늑철 5</td><td>의궤</td></tr>
+   <tr><td>하유량(아래 도르래틀, 움직)</td><td>下遊樑</td><td>1</td><td>도르래 4개, 하철강을 꿰어 쇠사슬 2가닥을 좌우 평행으로 걺</td><td>의궤·매일신문</td></tr>
+   <tr><td>상철강·하철강</td><td>上鐵杠·下鐵杠</td><td>각 1</td><td>도르래틀을 꿰는 쇠막대</td><td>매일신문</td></tr>
+   <tr><td>쇠사슬</td><td>鐵索</td><td>2</td><td>하철강 → 돌을 받친 철강</td><td>의궤</td></tr>
+   <tr><td>소거(얼레 틀)</td><td>繅車</td><td>2(좌·우)</td><td>장강 12척(3,636) 2개 + 단강 5척(1,515) 2개(모강·협강)</td><td>의궤(위키원)</td></tr>
+   <tr><td>대활륜(큰 도르래)</td><td>大滑輪</td><td>2</td><td>모강 아래 2척에 복토로 설치</td><td>의궤·매일신문</td></tr>
+   <tr><td>얼레축(소축)·나무살</td><td>繅軸</td><td>2</td><td>협강 위 약 6자에 복토, 축 양끝 구멍 3개씩 → 나무살 6개(끝에 밧줄)</td><td>매일신문</td></tr>
+  </table></div>
+  <div class="tblwrap"><table class="tbl">
+   <tr><th>항목</th><th>값(mm)</th><th>구분</th></tr>
+   <tr><td>승량각 길이</td><td>4,242(14척), 단면 180×180</td><td>길이=의궤, 단면<span class="as">가정</span></td></tr>
+   <tr><td>다리 벌림</td><td>바닥 x±1,450·y±900 / 꼭대기 x±1,150·y±450</td><td><span class="as">가정</span> (높이가 약 4.4m가 되도록)</td></tr>
+   <tr><td>횡량</td><td>길이 2,800·단면 240×300, 윗면 z≈4,400</td><td>길이·단면<span class="as">가정</span>, 높이=Kim 2017</td></tr>
+   <tr><td>전후강·좌우강</td><td>단면 120×120, 아래 단 z 1,212(4척), 위 단 z 2,900</td><td>높이 4척=매일신문, 나머지<span class="as">가정</span></td></tr>
+   <tr><td>중유량(고정)</td><td>길이 2,000, 도르래 4개 x=±840·±360, 지름 240, 두께 70, 중심 z 3,900</td><td>개수=의궤, 크기·위치<span class="as">가정</span></td></tr>
+   <tr><td>하유량(움직)</td><td>길이 1,500, 도르래 4개 x=±600·±120, 처음 z 1,500</td><td>개수=의궤, 나머지<span class="as">가정</span></td></tr>
+   <tr><td>쇠사슬</td><td>지름 20 고리, 2가닥 y=±250</td><td><span class="as">가정</span></td></tr>
+   <tr><td>돌(화강암 성돌)</td><td>900×600×500, 밀도 2,700 → 약 729kg(조작 0.3~7.2t)</td><td><span class="as">가정</span></td></tr>
+   <tr><td>받침목</td><td>150×150×1,000 2개 — 철강을 끼울 틈</td><td>Kim 2017 그림 18 해석</td></tr>
+   <tr><td>철강</td><td>길이 1,100(돌 너비보다 양쪽 100씩), 2개</td><td>Kim 2017 그림 17·18 해석</td></tr>
+   <tr><td>소거</td><td>x=±3,000, 장강 3,636(y=±757)</td><td>길이=의궤(위키원), 위치<span class="as">가정</span></td></tr>
+   <tr><td>대활륜</td><td>지름 600, 모강 아래 2척(606)</td><td>위치=의궤, 지름<span class="as">가정</span></td></tr>
+   <tr><td>얼레축·나무살</td><td>축 지름 150·z 1,818(협강 위 6자), 나무살 6개×2(길이 1,200)</td><td>위치=매일신문, 크기<span class="as">가정</span></td></tr>
+   <tr><td>밧줄</td><td>지름 30, 마(麻) 색</td><td><span class="as">가정</span></td></tr>
+  </table></div>
+  <div class="srcs">출처: <a href="https://www.ejmste.com/download/scientific-disciplines-of-geojunggi-the-traditional-crane-in-korean-science-technology-and-history-5017.pdf" target="_blank" rel="noopener">Kim 2017 (EJMSTE, 영문)</a> · <a href="https://contents.history.go.kr/front/hm/view.do?treeId=010604&amp;tabId=03&amp;levelId=hm_112_0050" target="_blank" rel="noopener">우리역사넷 「정약용의 거중기」</a> · <a href="https://www.imaeil.com/page/view/1997042300264449335" target="_blank" rel="noopener">매일신문 1997.4.23 「하이테크 문화유산-거중기」</a> · <a href="https://news.suwon.go.kr/_Ext/news/viewPrint.php?reqIdx=120779385057519522" target="_blank" rel="noopener">e수원뉴스(수원시)</a> · <a href="https://www.kyeongin.com/article/1351099" target="_blank" rel="noopener">경인일보 2009(수원화성박물관 재현)</a><br>환산: 1척=303mm, 1촌=30.3mm(Kim 2017 부록), 1근=600g. 전체 높이 약 4.4m·실제 들 수 있는 높이 약 3m(Kim 2017). 도르래는 위 4+아래 4=8개(위키백과·Kim 2017).</div>
+ </details>
+</aside>
+</main>
+<script>%%SCRIPT%%</script>
