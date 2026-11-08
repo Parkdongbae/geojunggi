@@ -161,7 +161,10 @@ const PRESET = {
   pulley: [[0, 0, 2900], .35, .14, 4400],
   winch: [[2800, 200, 2100], -.5, .18, 5600],
   stone: [[0, 0, 900], .5, .14, 4000],
-  sciMov: [[0, 0, 1900], .4, .1, 4300],
+  sciMov: [[0, 0, 2300], .25, .08, 6200],
+  sciFixed: [[700, 0, 3400], .15, .06, 3600],
+  sciAxle: [[1900, 0, 1700], -.25, .1, 4200],
+  sciWork: [[1000, 0, 1900], .1, .08, 7600],
   mars: [[2600, 0, 3300], -.95, .3, 16500],
 };
 function goCam(k) { const [t, a, e, d] = PRESET[k]; camAnim = { t0: performance.now(), from: [TGT.clone(), az, el, dist], to: [toW(...t), a, e, d] } }
@@ -291,16 +294,21 @@ function thud() {
 }
 
 // ---------- 과학 원리 탭 (PLAN 5절: 카드 6 + 역사, SVG는 다크모드 토큰 색) ----------
+const isRope = o => o.label.startsWith('밧줄');
 const SCI_HI = {
-  fixed: o => o.label.includes('중유량 도르래') || o.label.includes('대활륜(큰 도르래)') || o.label.includes('등자쇠'),
-  mov: o => o.label.includes('하유량 도르래'),
-  axle: o => o.label.includes('얼레축') || o.label.includes('나무살'),
+  fixed: o => o.label.includes('중유량 도르래') || o.label.includes('대활륜(큰 도르래)') || isRope(o),
+  mov: o => o.label.includes('하유량') || o.label.includes('돌(') || o.label.includes('성돌') || isRope(o),
+  com: o => o.label.includes('하유량') || o.label.includes('중유량 도르래') || o.label.includes('성돌') || isRope(o),
+  axle: o => o.label.includes('얼레축') || o.label.includes('나무살') || isRope(o),
+  work: o => o.label.includes('성돌') || o.label.includes('얼레축') || o.label.includes('나무살') || o.label.includes('하유량') || isRope(o),
 };
 let sciKey = null; const hiObjs = new Set();
 function setSci(k) {
   sciKey = k; hiObjs.clear();
   if (k && SCI_HI[k]) ALL.forEach(o => { if (SCI_HI[k](o)) hiObjs.add(o) });
-  if (k === 'fixed') goCam('pulley'); else if (k === 'mov') goCam('sciMov'); else if (k === 'axle') goCam('winch');
+  const CAMK = { fixed: 'sciFixed', mov: 'sciMov', com: 'sciMov', axle: 'sciAxle', work: 'sciWork', bal: 'sciMov' };
+  if (CAMK[k]) goCam(CAMK[k]);
+  sciT = 0; sciSig = '';
   document.querySelectorAll('#sciCards .sci').forEach(el => el.classList.toggle('on', el.dataset.k === k));
   dirty = true;
 }
@@ -391,6 +399,80 @@ function histSVG() {
   }).join('')}
    <text x="135" y="140" font-size="12" text-anchor="middle" fill="var(--fg)">경비 <tspan fill="var(--ac)" font-weight="700">4만 냥</tspan> 절약 — 자찬묘지명</text>
    <text x="135" y="162" font-size="11" text-anchor="middle" fill="var(--mut)">정약용: 평행 도르래 대신 수평 나열 도르래 선택(다리 4개)</text></svg>`;
+}
+// ---------- 과학 원리 3D 표시 (화살표·글자, 모델 좌표 mm) ----------
+let sciT = 0, sciSig = '';
+const sciG = new THREE.Group(); root.add(sciG);
+const SCI_COL = { load: 0xc0392b, rope: 0x1f6fd1, hand: 0x1e8e3e, dist: 0x8e44ad };
+const sciMats = {}; const sciMat = c => sciMats[c] || (sciMats[c] = new THREE.MeshBasicMaterial({ color: c, depthTest: false, transparent: true }));
+function clearSciG() { sciG.children.slice().forEach(o => { sciG.remove(o); if (o.geometry) o.geometry.dispose(); if (o.material && o.material.map) { o.material.map.dispose(); o.material.dispose() } o.children.forEach(c => c.geometry && c.geometry.dispose()) }); sciSig = '' }
+function arrow3(a, b, col, r = 22) {   // a → b, 굵은 화살표
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b), d = B.clone().sub(A), L = d.length(); if (L < 1) return;
+  const head = Math.min(L * .45, r * 6), g = new THREE.Group();
+  const sh = new THREE.Mesh(new THREE.CylinderGeometry(r, r, L - head, 10), sciMat(col)); sh.position.y = (L - head) / 2;
+  const cn = new THREE.Mesh(new THREE.ConeGeometry(r * 2.6, head, 14), sciMat(col)); cn.position.y = L - head / 2;
+  g.add(sh, cn); g.position.copy(A); g.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+  g.renderOrder = 10; sh.renderOrder = cn.renderOrder = 10; sciG.add(g);
+}
+function label3(text, p, col = '#1c140c', size = 1) {   // 늘 화면을 보는 글자판
+  const lines = text.split('\n'), fs = 44, c = document.createElement('canvas'), x = c.getContext('2d');
+  x.font = `700 ${fs}px sans-serif`; const w = Math.max(...lines.map(l => x.measureText(l).width)) + 36, h = lines.length * fs * 1.25 + 24;
+  c.width = w; c.height = h; x.font = `700 ${fs}px sans-serif`;
+  x.fillStyle = 'rgba(255,253,246,.92)'; x.strokeStyle = col; x.lineWidth = 5; x.beginPath(); x.roundRect(3, 3, w - 6, h - 6, 16); x.fill(); x.stroke();
+  x.fillStyle = col; x.textBaseline = 'top'; lines.forEach((l, i) => x.fillText(l, 18, 14 + i * fs * 1.25));
+  const tx = new THREE.CanvasTexture(c); tx.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tx, depthTest: false, transparent: true }));
+  const k = 1.9 * size; sp.scale.set(w * k, h * k, 1); sp.position.set(...p); sp.renderOrder = 11; sciG.add(sp);
+}
+const ropeXsAt = (st, Z) => { const xs = []; for (const q of ['L', 'R']) { const P = st.ropePath[q];
+  for (let i = 1; i < P.length; i++) { const a = P[i - 1], b = P[i]; if ((a[2] - Z) * (b[2] - Z) < 0 && Math.abs(a[0]) < 800 && Math.abs(b[0]) < 800) xs.push(a[0] + (b[0] - a[0]) * (Z - a[2]) / (b[2] - a[2])) } }
+  return xs.sort((a, b) => a - b) };
+const kN = n => (n / 1000).toFixed(n < 1000 ? 2 : 1) + 'kN', NN = n => Math.round(n) + 'N';
+function sciOverlay(st, k) {
+  const sig = (k || '-') + '|' + Math.round(st.lift / 10) + '|' + Math.round(st.tilt * 1e3) + '|' + ($('sciN') ? $('sciN').value : '') + ($('sciR') ? $('sciR').value : '') + ($('sciE') ? $('sciE').value : '');
+  if (sig === sciSig) return; clearSciG(); sciSig = sig;
+  if (!k || k === 'hist') return;
+  const W = 729 * sim.G, T = st.ropeTension, effV = $('sciE') ? +$('sciE').value / 100 : 1, h = st.lift, zL = sim.LOWER_Z0 + h, stoneTop = 650 + h, stoneBot = 150 + h;
+  const R = sim.R_PULLEY, u2 = sim.UPX[3], B = sim.BIG, AX = sim.AXLE;
+  if (k === 'fixed') {
+    // 고정 도르래: 들어오는 줄과 나가는 줄의 힘 크기는 같고 방향만 바뀜
+    arrow3([u2 - R, 0, sim.UPPER_Z - 200], [u2 - R, 0, sim.UPPER_Z - 900], SCI_COL.rope);
+    const P = st.ropePath.R, i = P.findIndex(p => Math.hypot(p[0] - B.x, p[2] - B.z) < sim.R_BIG + 2);
+    const t0 = P[i - 1], dir = [P[i][0] - t0[0], P[i][2] - t0[2]], dl = Math.hypot(...dir);   // 도르래를 떠나 대활륜으로 가는 줄 방향
+    const s0 = [t0[0] + dir[0] / dl * 250, 0, t0[2] + dir[1] / dl * 250];
+    arrow3(s0, [s0[0] + dir[0] / dl * 700, 0, s0[2] + dir[1] / dl * 700], SCI_COL.rope);
+    label3(`T = ${NN(T)}`, [u2 - R - 330, 0, sim.UPPER_Z - 600], '#1f6fd1');
+    label3(`T = ${NN(T)} (크기 같음)`, [s0[0] + dir[0] / dl * 700 - 650, 0, s0[2] + dir[1] / dl * 700 - 250], '#1f6fd1');
+    label3('고정 도르래: 방향만 바뀜', [u2, 0, sim.UPPER_Z + 520], '#1c140c', 1.1);
+  } else if (k === 'mov' || k === 'com') {
+    const n = k === 'com' && $('sciN') ? +$('sciN').value : 4, seg = Math.max(1, 2 * n);
+    arrow3([-620, 0, stoneBot + 420], [-620, 0, stoneBot - 300], SCI_COL.load, 30);
+    label3(`돌 무게 W = ${kN(W)}`, [-1250, 0, stoneBot + 150], '#c0392b');
+    const xs = ropeXsAt(st, zL + 650);
+    xs.forEach((x, i) => { const on = k === 'mov' || i >= (8 - seg) / 2 && i < 8 - (8 - seg) / 2;
+      if (on) arrow3([x, 0, zL + 300], [x, 0, zL + 300 + 500], SCI_COL.rope, 16) });
+    label3(`줄 ${seg}가닥이 나누어 받침\n한 가닥 = W/${seg} = ${kN(W / seg)}`, [0, 0, zL + 1250], '#1f6fd1', 1.05);
+    if (k === 'mov') label3('움직 도르래: 힘 ½, 줄은 2배 당김', [0, 0, zL - 520], '#1c140c');
+  } else if (k === 'axle') {
+    const ratio = $('sciR') ? +$('sciR').value : 8, F = T / ratio, top = [AX.x, 0, AX.z + sim.R_AXLE];
+    arrow3([top[0] + 60, 0, top[2] + 40], [top[0] - 520, 0, top[2] + 40 + 520 * .2], SCI_COL.rope);
+    label3(`축의 줄 힘 T = ${NN(T)}\n(축 반지름 r)`, [AX.x - 700, 0, AX.z + 650], '#1f6fd1');
+    const ang = st.axleAngle != null ? st.axleAngle : 0, tip = [AX.x, -330, AX.z + 600];
+    arrow3([tip[0] - 40, -330, tip[2]], [tip[0] + Math.max(120, 520 / ratio * 2), -330, tip[2]], SCI_COL.hand, 18);
+    label3(`나무살 끝 힘 F = T × r/R\n= ${NN(T)} ÷ ${ratio} = ${NN(F)}`, [AX.x + 900, -330, AX.z + 900], '#1e8e3e');
+    label3(`R : r = ${ratio} : 1`, [AX.x, -330, AX.z - 820], '#1c140c');
+  } else if (k === 'work') {
+    arrow3([-760, 0, stoneBot - 100], [-760, 0, stoneBot - 100 + Math.max(60, h)], SCI_COL.dist, 18);
+    label3(`돌이 오른 높이 h = ${(h / 1000).toFixed(2)}m\n힘 W`, [-1500, 0, stoneBot + 300], '#8e44ad', 1.6);
+    label3(`감은 줄(양쪽 합) = 8h = ${(st.ropePulled / 1000).toFixed(2)}m\n힘 W/8`, [AX.x, 0, AX.z + 1100], '#1f6fd1', 1.6);
+    label3(`나무살 끝이 돈 거리(양쪽 합) = 64h = ${(st.ropePulled * 8 / 1000).toFixed(1)}m\n힘 W/64`, [AX.x + 300, 0, AX.z - 950], '#1e8e3e', 1.6);
+    label3('힘 × 거리 = 일정 (일의 원리)', [0, 0, 4800], '#1c140c', 1.7);
+  } else if (k === 'bal') {
+    label3(`왼쪽을 더 빨리 감으면 기울어짐\n기울기 ${(st.tilt * 180 / Math.PI).toFixed(1)}°`, [0, 0, zL + 1200], Math.abs(st.tilt) > sim.TILT_WARN ? '#c0392b' : '#1c140c', 1.05);
+    arrow3([-AX.x, 0, AX.z + 900], [-AX.x, 0, AX.z + 1500], SCI_COL.hand, 26); label3('빨리', [-AX.x, 0, AX.z + 1750], '#1e8e3e');
+    arrow3([AX.x, 0, AX.z + 900], [AX.x, 0, AX.z + 1150], SCI_COL.hand, 26); label3('천천히', [AX.x, 0, AX.z + 1400], '#1e8e3e');
+    label3(`효율 ${Math.round(effV * 100)}% → 줄 힘 ${NN(st.ropeTension)}`, [0, 0, 650 + st.lift - 1100], '#1f6fd1');
+  }
 }
 const SCI_CARDS = [
   { k: 'fixed', t: '1. 고정 도르래(定滑車)', fx: '힘 = 무게 — 방향만 바뀜', tx: '도르래가 틀에 고정되어 있으면 힘의 크기는 그대로고 방향만 바뀝니다. 사람이 바닥에서 아래로 당겨 얼레를 감을 수 있습니다. 중유량 도르래 4개와 대활륜이 이 역할을 합니다.' },
@@ -524,6 +606,7 @@ function setMode(m) {
   marsG.visible = m === 'mars'; cartG.visible = m === 'mars'; arrowG.visible = false;
   if (m !== 'mars') ['chainL', 'chainR', 'bars'].forEach(k => (MV.get(k) || []).forEach(o => o.g.visible = true));
   if (m !== 'sci' && sciKey) setSci(null);
+  if (m !== 'sci') clearSciG();
   if (m !== 'mars') marsPhase = '';
   if (m === 'ctrl') { intro = true; cur = N; show(N); camAnim = { t0: performance.now(), from: [TGT.clone(), az, el, dist], to: [toW(0, 0, 2400), 0, .18, 13000] }; dirty = true }
   if (m === 'mars') { intro = true; cur = N; show(N); goCam('mars'); marsUI(sim.scene(marsT)); }
@@ -537,11 +620,11 @@ function placeAll(P, SP) {
   for (const o of ALL) {
     if (o.dyn) continue;
     const M = new THREE.Matrix4();
-    const p = (mode === 'ctrl' || mode === 'mars') && o.mv ? P[o.mv] : null;
+    const p = (mode === 'ctrl' || mode === 'mars' || mode === 'sci') && P && o.mv ? P[o.mv] : null;
     if (p && p.ang) { tmpV.set(...p.ax).normalize();
       M.makeTranslation(p.piv[0], p.piv[1], p.piv[2]).multiply(tmpR.makeRotationAxis(tmpV, p.ang)).multiply(tmpM.makeTranslation(-p.piv[0], -p.piv[1], -p.piv[2])); }
     if (p && p.pos) M.premultiply(tmpM.makeTranslation(...p.pos));
-    const sp = (mode === 'ctrl' || mode === 'mars') && o.spin ? SP[o.spin] : null;
+    const sp = (mode === 'ctrl' || mode === 'mars' || mode === 'sci') && SP && o.spin ? SP[o.spin] : null;
     if (sp && sp.ang) { tmpV.set(...o.sax).normalize();
       M.multiply(tmpR2.makeTranslation(o.spiv[0], o.spiv[1], o.spiv[2])).multiply(tmpR.makeRotationAxis(tmpV, sp.ang)).multiply(tmpM.makeTranslation(-o.spiv[0], -o.spiv[1], -o.spiv[2])); }
     if (o.off[0] || o.off[1] || o.off[2]) M.premultiply(tmpM.makeTranslation(...o.off));
@@ -595,6 +678,22 @@ let last = performance.now(), dirty = true, ready = false, prevLift = 0, creakT 
       w.torso.rotation.y = winding ? -.16 + Math.sin(armT * 3 + w.i * .8) * .05 : 0;
       w.arms.forEach(a => a.rotation.y = -.55 + (winding ? Math.sin(armT * 6 + w.i * 1.3) * .18 : 0)); });
     dirty = true;
+  } else if (mode === 'sci' && ready) {
+    // 과학 원리: 왼쪽 3D에서 거중기를 천천히 감았다 풀며 힘·거리를 화살표와 글자로 보여 줌
+    sciT += dt;
+    const base = 700 * (1 - Math.cos(sciT * 0.7)) / 2;                    // 0 ~ 700mm 오르내림
+    const k = sciKey, bal = k === 'bal';
+    const thL = (bal ? 1.12 : 1) * base * 4 / sim.R_AXLE, thR = (bal ? 0.88 : 1) * base * 4 / sim.R_AXLE;
+    const eff = bal ? +($('sciE') ? $('sciE').value : 100) / 100 : 1;
+    st = sim.crane({ thL, thR, massKg: 729, eff }); P = {}; SP = {};
+    P.lower = { pos: [0, 0, st.lift], ang: -st.tilt, piv: [0, 0, sim.LOWER_Z0], ax: [0, 1, 0] };
+    P.chainL = P.chainR = P.stone = P.bars = P.lower;
+    ['u0', 'u1', 'u2', 'u3'].forEach((q, i) => SP[q] = { ang: (i < 2 ? -1 : 1) * st.sheaveAngles[i] });
+    ['d0', 'd1', 'd2', 'd3'].forEach((q, i) => SP[q] = { ang: (i < 2 ? -1 : 1) * st.sheaveAngles[4 + i] });
+    SP.bw0 = { ang: st.bigWheelAngles[0] }; SP.bw1 = { ang: -st.bigWheelAngles[1] };
+    SP.axL = { ang: -thL }; SP.axR = { ang: thR };
+    updRopes(st); sciOverlay(st, k);
+    dirty = true;
   } else if (mode === 'mars' && ready) {
     if (marsPlaying) setMars(marsT + dt * marsSpeed);
     st = sim.scene(marsT); P = {}; SP = {};
@@ -627,7 +726,7 @@ let last = performance.now(), dirty = true, ready = false, prevLift = 0, creakT 
     dirty = true;
   }
 
-  const moving = ret.length > 0 || !!drag || S.some((s, i) => s.v !== ((i < cur && s.ready) ? 1 : 0)) || (mode === 'ctrl' && ready) || (mode === 'mars' && ready);
+  const moving = ret.length > 0 || !!drag || S.some((s, i) => s.v !== ((i < cur && s.ready) ? 1 : 0)) || (mode === 'ctrl' && ready) || (mode === 'mars' && ready) || (mode === 'sci' && ready);
   if (!dirty && !moving) return; dirty = false;
   placeAll(P, SP);
   S.forEach((s, i) => {
