@@ -157,9 +157,9 @@ test('유형거가 들어올 때 돌 바닥이 침목보다 높고, 내려놓으
   assert.equal(scene(T0('out') + 1).lift, CART_LIFT);
 });
 
-test('돌을 싣고 나갈 때 돌 윗면(1,060)이 앞 가로대(전후강) 밑면(약 1,152)보다 낮다', () => {
+test('돌을 싣고 나갈 때 돌 윗면(1,060)이 앞 가로대(전후강) 밑면(약 2,440)보다 낮다', () => {
   const topOnCart = CART_TOP + 500;            // 돌 높이 500
-  const crossBottom = 1212 - 60;               // 아래 단 전후강 중심 1,212, 단면 120
+  const crossBottom = 2500 - 60;               // 아래 단 전후강 중심 2,500, 단면 120
   assert.ok(topOnCart < crossBottom);
 });
 
@@ -241,11 +241,23 @@ test('F4: 쇠사슬 2가닥(고리)과 철강 2개 부재가 있다', async t =>
   assert.equal(chain.node.op, 'uni');                   // 고리(링) 이어 붙이기
 });
 
-test('밧줄 세로 8가닥이 서로 겹치지 않고 고른 간격(240)으로 내려온다', () => {
-  const st = crane({ thL: 5, thR: 5 });
-  const xs = [];
+test('밧줄 8가닥이 서로 겹치지 않고 고르게 떨어져 내려온다 (높이 2,700에서 간격 ≥ 100)', () => {
+  const st = crane({ thL: 5, thR: 5 }), xs = [], Z = 2700;
   for (const k of ['L', 'R']) { const P = st.ropePath[k];
-    for (let i = 1; i < P.length; i++) if (Math.abs(P[i][0] - P[i - 1][0]) < 20 && Math.abs(P[i][2] - P[i - 1][2]) > 500) xs.push(Math.round((P[i][2] < P[i - 1][2] ? P[i] : P[i - 1])[0])); }
+    for (let i = 1; i < P.length; i++) { const [a, b] = [P[i - 1], P[i]];
+      if ((a[2] - Z) * (b[2] - Z) < 0 && Math.abs(a[0]) < 800 && Math.abs(b[0]) < 800) xs.push(a[0] + (b[0] - a[0]) * (Z - a[2]) / (b[2] - a[2])); } }
   xs.sort((a, b) => a - b);
-  assert.deepEqual(xs, [-840, -600, -360, -120, 120, 360, 600, 840]);
+  assert.equal(xs.length, 8);
+  for (let i = 1; i < 8; i++) assert.ok(xs[i] - xs[i - 1] >= 100, 'gap ' + xs.map(Math.round));
+});
+
+test('밧줄은 대활륜·끝 도르래 면을 가로지르지 않는다 (호를 나눈 현의 처짐만 허용)', async () => {
+  const { BIG, R_BIG, END, R_END } = await import('../src/sim.js');
+  const st = crane({ thL: 3, thR: 3 });
+  const P = st.ropePath.R;
+  for (let i = 1; i < P.length; i++) for (let f = 0; f <= 1; f += 0.1) {
+    const x = P[i - 1][0] + (P[i][0] - P[i - 1][0]) * f, z = P[i - 1][2] + (P[i][2] - P[i - 1][2]) * f;
+    assert.ok(Math.hypot(x - BIG.x, z - BIG.z) > R_BIG * Math.cos(Math.PI / 24) - 1, 'rope inside big wheel at ' + [x, z].map(Math.round));
+    assert.ok(Math.hypot(x - END.x, z - END.z) > R_END * Math.cos(Math.PI / 24) - 1, 'rope inside end pulley');
+  }
 });

@@ -11,16 +11,24 @@ export const SEGMENTS = 8;           // 하유량을 받치는 줄 가닥 수 (�
 // 기계 주요 치수 (PLAN 1-3절 「앱에서 쓰는 치수」)
 export const R_AXLE = 75;            // 얼레축 반지름 (지름 150)
 export const R_SPOKE = 600;          // 나무살 끝 반지름 (나무살 길이 1,200)
-export const R_PULLEY = 120;         // 도르래(활차) 반지름 (지름 240 = 8촌)
-export const R_BIG = 300;            // 대활륜 반지름 (지름 600)
+export const R_PULLEY = 95;          // 도르래(활차) 반지름 (지름 190 — 의궤 전도 비율, 가정값)
+export const R_BIG = 350;            // 대활륜 반지름 (지름 700 — 의궤 전도 비율, 가정값)
+export const R_END = 115;            // 횡량 끝 고정 도르래 반지름 (가정값)
+export const END = { x: 900, z: 3950 };   // 횡량 끝 고정 도르래 중심 (의궤 전도: 횡량 양끝에 매단 도르래)
+export const UPX = [-600, -200, 200, 600];   // 중유량(고정) 도르래 4개 중심 x
+export const DNX = [-435, -145, 145, 435];   // 하유량(움직) 도르래 4개 중심 x — 같은 간격 290
+// 소거 장강: 바깥 땅(x=3,375)에서 아래 단 좌우강 바깥면(x=866, z=2,632)에 기댄 12척 기둥 (의궤 전도, 위치=가정값)
+export const POLE = { bx: 3375, tx: 866, tz: 2632, L: 3636 };
+export const poleAt = t => [POLE.bx + (POLE.tx - POLE.bx) * t / POLE.L, POLE.tz * t / POLE.L];   // 밑동에서 t(mm) 올라간 점 [x, z]
 export const LIFT_MAX = 1700;        // 하유량 최대 들림 (중유량 아래 400까지)
 export const LOWER_Z0 = 1500;        // 하유량 도르래 중심 처음 높이
 export const UPPER_Z = 3900;         // 중유량(고정) 도르래 중심 높이
 export const HAM_Z = 3660;           // 함환(밧줄 묶는 고리) 바닥 높이
 export const TILT_SPAN = 1350;       // 좌우 줄 받침 사이 거리 (기울기 계산용, 가정값)
 export const TILT_WARN = 4 * Math.PI / 180;  // 기울기 경고 한계 (의궤: 좌우 같은 속도)
-export const BIG = { x: 3000, y: 0, z: 3030 };    // 대활륜 중심 (모강 아래 2척 = 606, 두 장강 사이 y=0)
-export const AXLE = { x: 3000, y: 0, z: 1818 };   // 얼레축 중심 (협강 위 6자, 두 장강 사이 y=0)
+export const MO_T = 3300, HYEOP_T = 150;          // 모강·협강이 장강에 걸린 자리(밑동에서 장강을 따라 잰 길이)
+export const BIG = { x: poleAt(MO_T - 606)[0], y: 0, z: poleAt(MO_T - 606)[1] };      // 대활륜 중심: 모강 아래 2척(606)
+export const AXLE = { x: poleAt(HYEOP_T + 1818)[0], y: 0, z: poleAt(HYEOP_T + 1818)[1] };  // 얼레축 중심: 협강 위 6자(1,818)
 export const MAX_WORKER_FORCE = 300; // N — 1인이 오래 당길 수 있는 힘(가정값), 넘으면 얼레가 안 돎
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -57,23 +65,38 @@ export function crane({ thL = 0, thR = 0, massKg = 729, eff = 1 } = {}) {
 function ropePaths(hL, hR) {
   return { L: ropeSide(-1, hL), R: ropeSide(1, hR) };
 }
+// 두 바퀴에 같은 줄이 걸릴 때의 접선. k = +1(시계 방향으로 감김), −1(반시계). [x, z] 평면.
+function tangent(C1, r1, k1, C2, r2, k2) {
+  const D = [C2[0] - C1[0], C2[1] - C1[1]], d = Math.hypot(D[0], D[1]), phi = Math.atan2(D[1], D[0]);
+  const th = phi + Math.acos((k1 * r1 - k2 * r2) / d), n = [Math.cos(th), Math.sin(th)];
+  return [[C1[0] + k1 * r1 * n[0], C1[1] + k1 * r1 * n[1]], [C2[0] + k2 * r2 * n[0], C2[1] + k2 * r2 * n[1]]];
+}
+const ang = (C, P) => Math.atan2(P[1] - C[1], P[0] - C[0]);
+// C 둘레를 a0 → a1 (k=+1 시계: 각 감소, −1 반시계: 각 증가)로 도는 점들 — 줄은 언제나 바퀴 둘레(테)에 붙음
+function arcPts(C, r, a0, a1, k, out) {
+  let da = a1 - a0; if (k > 0) { while (da > 0) da -= 2 * Math.PI } else { while (da < 0) da += 2 * Math.PI }
+  const n = Math.max(2, Math.ceil(Math.abs(da) / (Math.PI / 12)));
+  for (let i = 1; i <= n; i++) { const a = a0 + da * i / n; out.push([C[0] + r * Math.cos(a), C[1] + r * Math.sin(a)]) }
+}
+// 오른쪽(s=+1) 기준으로 [x, z] 경로를 만든 뒤 s를 곱해 좌우를 맞춤
 function ropeSide(s, h) {
-  const zL = LOWER_Z0 + h;                    // 이쪽 줄이 받치는 하유량 높이
-  const arcN = 8, pts = [[s * 120, 0, HAM_Z + 16], [s * 120, 0, zL]];   // 함환 고리(지름 300) x=±120에 묶인 끝 → 8가닥이 240 간격
-  const under = cx => { for (let i = 1; i <= arcN; i++) { const th = Math.PI + Math.PI * i / arcN; pts.push([cx + s * R_PULLEY * Math.cos(th), 0, zL + R_PULLEY * Math.sin(th)]); } };
-  const over = cx => { for (let i = 1; i <= arcN; i++) { const th = Math.PI - Math.PI * i / arcN; pts.push([cx + s * R_PULLEY * Math.cos(th), 0, UPPER_Z + R_PULLEY * Math.sin(th)]); } };
-  under(s * 240);                                             // s·120 → s·360 (밑 반바퀴)
-  over(s * 480);                                              // s·360 → s·600 (위 반바퀴)
-  pts.push([s * 600, 0, zL]); under(s * 720);                 // s·600 → s·840 (밑 반바퀴)
-  over(s * 960);                                              // s·840 → s·1,080 (위 반바퀴)
-  // 바깥쪽으로 비스듬히 대활륜(왼쪽 150° 접점)으로
-  const c0 = [BIG.x * s + R_BIG * Math.cos(150 * Math.PI / 180), 0, BIG.z + R_BIG * Math.sin(150 * Math.PI / 180)];
-  const o0 = pts[pts.length - 1];
-  for (let i = 1; i <= arcN; i++) { const u = i / arcN; pts.push([o0[0] + (c0[0] - o0[0]) * u, 0, o0[2] + (c0[2] - o0[2]) * u]); }
-  // 대활륜 위 반바퀴(150° → 0°), 아래로 얼레축에 감김
-  for (let i = 1; i <= arcN; i++) { const a = (150 - 150 * i / arcN) * Math.PI / 180; pts.push([BIG.x * s + R_BIG * Math.cos(a), 0, BIG.z + R_BIG * Math.sin(a)]); }
-  pts.push([AXLE.x * s, 0, AXLE.z + R_AXLE]);
-  return pts;
+  const zL = LOWER_Z0 + h, R = R_PULLEY;
+  const [l1, l2] = [DNX[2], DNX[3]], [u1, u2] = [UPX[2], UPX[3]];
+  const P = [[l1 - R, HAM_Z + 16], [l1 - R, zL]];          // 함환 고리에 묶인 끝 → 하유량 안쪽 도르래
+  const under = cx => arcPts([cx, zL], R, Math.PI, 2 * Math.PI, -1, P);   // 움직 도르래 밑 반바퀴
+  const over = cx => arcPts([cx, UPPER_Z], R, Math.PI, 0, 1, P);           // 고정 도르래 위 반바퀴
+  under(l1); P.push([u1 - R, UPPER_Z]); over(u1);
+  P.push([l2 - R, zL]); under(l2); P.push([u2 - R, UPPER_Z]);
+  // 중유량 바깥 도르래(시계) → 횡량 끝 도르래(시계) → 대활륜(반시계: 안쪽으로 내려와 밑을 돌아 바깥으로) → 얼레축(시계: 위로 감김)
+  const U = [u2, UPPER_Z], E = [END.x, END.z], W = [BIG.x, BIG.z], A = [AXLE.x, AXLE.z];
+  const [t1, t2] = tangent(U, R, 1, E, R_END, 1);
+  arcPts(U, R, Math.PI, ang(U, t1), 1, P); P.push(t2);
+  const [t3, t4] = tangent(E, R_END, 1, W, R_BIG, -1);
+  arcPts(E, R_END, ang(E, t2), ang(E, t3), 1, P); P.push(t4);
+  const [t5, t6] = tangent(W, R_BIG, -1, A, R_AXLE, 1);
+  arcPts(W, R_BIG, ang(W, t4), ang(W, t5), -1, P); P.push(t6);
+  arcPts(A, R_AXLE, ang(A, t6), ang(A, t6) - Math.PI / 2, 1, P);
+  return P.map(([x, z]) => [s * x, 0, z]);
 }
 
 // ---------- 과학 원리용 (그래프·SVG) ----------

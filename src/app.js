@@ -131,8 +131,8 @@ function segMesh(p0, p1, r, mat) {
 const part = (geo, mat, x, y, z, parent) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m };
 for (const s of [-1, 1]) for (let i = 0; i < 15; i++) {
   const row = Math.floor(i / 5), col = i % 5;
-  const wx = s * (3820 + 520 * row), wy = -800 + 400 * col;   // 어깨너비(약 370)보다 넓게 400 간격
-  const face = Math.atan2(-wy, s * 3000 - wx);      // 얼레 축을 바라봄 (+x 쪽이 앞)
+  const wx = s * (3750 + 520 * row), wy = -800 + 400 * col;   // 어깨너비(약 370)보다 넓게 400 간격
+  const face = Math.atan2(-wy, s * sim.AXLE.x - wx);      // 얼레 축을 바라봄 (+x 쪽이 앞)
   const grp = new THREE.Group(); grp.position.set(wx, wy, 0); grp.rotation.z = face;
   [-90, 90].forEach(y => part(WG.leg, wMatP, 0, y, 410, grp));
   const torso = new THREE.Group(); torso.position.z = 820; grp.add(torso);   // 엉덩이를 축으로 기울임
@@ -144,7 +144,7 @@ for (const s of [-1, 1]) for (let i = 0; i < 15; i++) {
     torso.add(arm); return arm;
   });
   const hx = wx + 470 * Math.cos(face), hy = wy + 470 * Math.sin(face);
-  WORKERG.add(grp, segMesh(new THREE.Vector3(s * 3560, wy, 2150), new THREE.Vector3(hx, hy, 1600), 18, wMatR));
+  WORKERG.add(grp, segMesh(new THREE.Vector3(s * (sim.AXLE.x + 520), Math.max(-330, Math.min(330, wy)), sim.AXLE.z + 300), new THREE.Vector3(hx, hy, 1600), 18, wMatR));
   WORKERS.push({ grp, torso, arms, side: s, i });
 }
 
