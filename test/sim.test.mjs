@@ -258,6 +258,20 @@ test('밧줄은 대활륜·끝 도르래 면을 가로지르지 않는다 (호�
   for (let i = 1; i < P.length; i++) for (let f = 0; f <= 1; f += 0.1) {
     const x = P[i - 1][0] + (P[i][0] - P[i - 1][0]) * f, z = P[i - 1][2] + (P[i][2] - P[i - 1][2]) * f;
     assert.ok(Math.hypot(x - BIG.x, z - BIG.z) > R_BIG * Math.cos(Math.PI / 24) - 1, 'rope inside big wheel at ' + [x, z].map(Math.round));
-    assert.ok(Math.hypot(x - END.x, z - END.z) > R_END * Math.cos(Math.PI / 24) - 1, 'rope inside end pulley');
   }
+});
+
+test('큰 밧줄은 중유량 바깥 도르래에서 곧장 대활륜 바깥쪽 둘레로 간다', async () => {
+  const { BIG, R_BIG } = await import('../src/sim.js');
+  const P = crane({}).ropePath.R;
+  const onWheel = P.filter(p => Math.abs(Math.hypot(p[0] - BIG.x, p[2] - BIG.z) - R_BIG) < 1);
+  assert.ok(onWheel.length >= 1);
+  assert.ok(onWheel.every(p => p[0] > BIG.x), '바퀴 바깥쪽(멀리 있는 쪽)에 걸림');
+});
+
+test('끝 도르래 밧줄은 위 단 좌우강에서 도르래를 넘어 아래 단 좌우강으로 간다', async () => {
+  const { endRopePath, END, R_END, TIER_TIE } = await import('../src/sim.js');
+  const P = endRopePath();
+  assert.deepEqual(P[0], TIER_TIE.up); assert.deepEqual(P[P.length - 1], TIER_TIE.low);
+  assert.ok(Math.max(...P.map(p => p[1])) > END.z + R_END - 2);   // 도르래 위로 넘어감
 });

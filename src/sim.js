@@ -14,7 +14,8 @@ export const R_SPOKE = 600;          // 나무살 끝 반지름 (나무살 길�
 export const R_PULLEY = 95;          // 도르래(활차) 반지름 (지름 190 — 의궤 전도 비율, 가정값)
 export const R_BIG = 350;            // 대활륜 반지름 (지름 700 — 의궤 전도 비율, 가정값)
 export const R_END = 115;            // 횡량 끝 고정 도르래 반지름 (가정값)
-export const END = { x: 900, z: 3950 };   // 횡량 끝 고정 도르래 중심 (의궤 전도: 횡량 양끝에 매단 도르래)
+export const END = { x: 900, y: 100, z: 3950 };   // 횡량 끝 고정 도르래 중심 (의궤 전도: 횡량 양끝에 매단 도르래). 큰 밧줄(y=0)과 엇갈리게 y=100
+export const TIER_TIE = { up: [695, 3282], low: [791, 2632] };   // 끝 도르래 밧줄을 묶는 위·아래 단 좌우강 바깥면 [x, z]
 export const UPX = [-600, -200, 200, 600];   // 중유량(고정) 도르래 4개 중심 x
 export const DNX = [-435, -145, 145, 435];   // 하유량(움직) 도르래 4개 중심 x — 같은 간격 290
 // 소거 장강: 바깥 땅(x=3,375)에서 아래 단 좌우강 바깥면(x=866, z=2,632)에 기댄 12척 기둥 (의궤 전도, 위치=가정값)
@@ -87,16 +88,23 @@ function ropeSide(s, h) {
   const over = cx => arcPts([cx, UPPER_Z], R, Math.PI, 0, 1, P);           // 고정 도르래 위 반바퀴
   under(l1); P.push([u1 - R, UPPER_Z]); over(u1);
   P.push([l2 - R, zL]); under(l2); P.push([u2 - R, UPPER_Z]);
-  // 중유량 바깥 도르래(시계) → 횡량 끝 도르래(시계) → 대활륜(반시계: 안쪽으로 내려와 밑을 돌아 바깥으로) → 얼레축(시계: 위로 감김)
-  const U = [u2, UPPER_Z], E = [END.x, END.z], W = [BIG.x, BIG.z], A = [AXLE.x, AXLE.z];
-  const [t1, t2] = tangent(U, R, 1, E, R_END, 1);
+  // 중유량 바깥 도르래(시계) → 대활륜 바깥쪽(시계: 줄이 바퀴 바깥 둘레에 걸림) → 얼레축(시계: 위로 감김)
+  const U = [u2, UPPER_Z], W = [BIG.x, BIG.z], A = [AXLE.x, AXLE.z];
+  const [t1, t2] = tangent(U, R, 1, W, R_BIG, 1);
   arcPts(U, R, Math.PI, ang(U, t1), 1, P); P.push(t2);
-  const [t3, t4] = tangent(E, R_END, 1, W, R_BIG, -1);
-  arcPts(E, R_END, ang(E, t2), ang(E, t3), 1, P); P.push(t4);
-  const [t5, t6] = tangent(W, R_BIG, -1, A, R_AXLE, 1);
-  arcPts(W, R_BIG, ang(W, t4), ang(W, t5), -1, P); P.push(t6);
+  const [t5, t6] = tangent(W, R_BIG, 1, A, R_AXLE, 1);
+  arcPts(W, R_BIG, ang(W, t2), ang(W, t5), 1, P); P.push(t6);
   arcPts(A, R_AXLE, ang(A, t6), ang(A, t6) - Math.PI / 2, 1, P);
   return P.map(([x, z]) => [s * x, 0, z]);
+}
+
+// 횡량 끝 고정 도르래에 거는 따로 된 밧줄: 위 단 좌우강 → 도르래 위로 넘어 → 아래 단 좌우강 (오른쪽 기준 [x, z])
+export function endRopePath() {
+  const E = [END.x, END.z], P = [TIER_TIE.up];
+  const [, a] = tangent(TIER_TIE.up, 0, 1, E, R_END, 1);
+  const [b] = tangent(E, R_END, 1, TIER_TIE.low, 0, 1);
+  P.push(a); arcPts(E, R_END, ang(E, a), ang(E, b), 1, P); P.push(TIER_TIE.low);
+  return P;
 }
 
 // ---------- 과학 원리용 (그래프·SVG) ----------

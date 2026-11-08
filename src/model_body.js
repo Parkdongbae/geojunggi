@@ -3,7 +3,7 @@
 //       Kim 2017, 매일신문 1997.4.23 「하이테크 문화유산-거중기」, 위키원·수원시 자료 (PLAN.md 1절 정리)
 // 1척 = 303mm. 근거 없는 치수는 // 가정값 표시.
 import * as SM from './sim.js';
-const { LOWER_Z0, UPPER_Z, HAM_Z, BIG, AXLE, R_PULLEY, R_BIG, R_END, END, UPX, DNX, POLE, poleAt, MO_T, HYEOP_T } = SM;
+const { LOWER_Z0, UPPER_Z, HAM_Z, BIG, AXLE, R_PULLEY, R_BIG, R_END, END, UPX, DNX, POLE, poleAt, MO_T, HYEOP_T, TIER_TIE, endRopePath } = SM;
 
 export function buildModel() {
   const G = {}, steps = [];
@@ -71,11 +71,10 @@ export function buildModel() {
   step('crossbeam', '횡량 올리기 + 괘정 4개', [
     mem('횡량(꼭대기 가로보)', WD, box([0, 0, 4250], [2000, 240, 300]), { mat: 'wood' }),
     mem('늑철 4(횡량 쇠테)', FE, uni(...[-760, -330, 330, 760].map(x => box([x, 0, 4250], [24, 280, 330]))), { mat: 'iron' }),
-    // 횡량 양끝에 매단 고정 도르래: 중유량에서 나온 밧줄을 다리 바깥으로 내려 대활륜에 보냄 (의궤 전도)
-    ...[-1, 1].map(s => mem(nmS(s, '횡량 끝 고정 도르래'), WL, diff(cylY([s * END.x, 0, END.z], 2 * R_END, 60), cylY([s * END.x, 0, END.z], 2 * R_END - 30, 26)),
-      { mat: 'woodL', spin: s > 0 ? 'eR' : 'eL', spiv: [s * END.x, 0, END.z], sax: [0, 1, 0] })),
-    ...[-1, 1].map(s => mem(nmS(s, '끝 도르래 등자쇠·축핀'), FE, uni(rod([s * END.x, -60, END.z], [s * END.x, 60, END.z], 20),
-      ...[-40, 40].map(y => box([s * END.x, y, (END.z + 4100) / 2], [40, 10, 4100 - END.z]))), { mat: 'iron' })),
+    // 횡량 양끝에 매단 고정 도르래: 위·아래 단 좌우강을 잇는 따로 된 밧줄이 걸림 (의궤 전도). 큰 밧줄과 엇갈리게 y=100
+    ...[-1, 1].map(s => mem(nmS(s, '횡량 끝 고정 도르래'), WL, diff(cylY([s * END.x, END.y, END.z], 2 * R_END, 60), cylY([s * END.x, END.y, END.z], 2 * R_END - 30, 26)), { mat: 'woodL' })),
+    ...[-1, 1].map(s => mem(nmS(s, '끝 도르래 등자쇠·축핀'), FE, uni(rod([s * END.x, END.y - 60, END.z], [s * END.x, END.y + 60, END.z], 20),
+      ...[-40, 40].map(y => box([s * END.x, END.y + y, (END.z + 4100) / 2], [40, 10, 4100 - END.z]))), { mat: 'iron' })),
     mem('괘정(걸쇠) 4개 — 다리에 검', WD2, uni(...SIGNS.flatMap(([sx, sy]) => [
       beam([sx * 480, sy * 450, 4340], [sx * 330, sy * 130, 4340], 80, 80),
       box([sx * 330, sy * 130, 4260], [80, 80, 160])])), { mat: 'wood' })]);
@@ -191,6 +190,10 @@ export function buildModel() {
   step('rope', '밧줄 걸기(좌·우 1가닥씩)', [
     mem('밧줄(왼쪽)', HEMP, box([0, 0, HAM_Z], [1, 1, 1]), { mat: 'hemp', dyn: 'ropeL', mv: 'ropeL' }),
     mem('밧줄(오른쪽)', HEMP, box([0, 0, HAM_Z], [1, 1, 1]), { mat: 'hemp', dyn: 'ropeR', mv: 'ropeR' }),
+    // 횡량 끝 고정 도르래 밧줄: 위 단 좌우강 → 도르래 위 → 아래 단 좌우강 (의궤 전도, 묶는 자리=가정값)
+    ...[-1, 1].map(s => { const P = endRopePath();
+      return mem(nmS(s, '끝 도르래 밧줄(위·아래 좌우강을 이음)'), HEMP, uni(...P.slice(1).map((q, i) => rod([s * P[i][0], END.y, P[i][1]], [s * q[0], END.y, q[1]], 26)),
+        ...[TIER_TIE.up, TIER_TIE.low].map(([x, z]) => diff(cyl([s * (x + 10), END.y, z], 70, 70, 14), cyl([s * (x + 10), END.y, z], 34, 34, 18)))), { mat: 'hemp' }) }),
     // 의궤 전도처럼 대활륜 둘레와 얼레축에 밧줄이 여러 번 감긴 모습 (감긴 수=가정값)
     ...[-1, 1].map(s => mem(nmS(s, '대활륜에 감긴 밧줄(3바퀴)'), HEMP, uni(...[-27, 0, 27].map(y =>
       diff(cylY([s * BIG.x, y, BIG.z], 2 * R_BIG + 60, 24, 48), cylY([s * BIG.x, y, BIG.z], 2 * R_BIG - 2, 30, 48)))), { mat: 'hemp' })),
