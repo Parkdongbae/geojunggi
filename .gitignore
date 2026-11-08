@@ -2,3 +2,5 @@ node_modules/
 src/model.js
 page_fragment.html
 .omo/
+
+src/nokro/nk_model.js

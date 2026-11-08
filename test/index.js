@@ -3,4 +3,4 @@
 // 실행 단위가 index.js 자신일 때는 건너뛰어 sim.test.mjs와의 이중 실행을 막는다.
 import { pathToFileURL } from 'node:url';
 const entry = process.argv[1] ? pathToFileURL(process.argv[1]).href : '';
-if (!entry.endsWith('/index.js')) await import('./sim.test.mjs');
+if (!entry.endsWith('/index.js')) { await import('./sim.test.mjs'); await import('./nokro.test.mjs'); }
