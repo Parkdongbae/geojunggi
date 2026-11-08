@@ -128,6 +128,9 @@ export const RAISE_H = 650;    // 돌을 드는 높이(약 0.65m): 돌 바닥 80
 export const CART_IN = -6000;  // 유형거 대기 위치(y, 앞쪽)
 export const CART_OUT = -4200; // 싣고 나간 뒤 위치(y)
 export const CART_WALL = [6000, -2200];   // 성벽 앞 도착 위치 [x, y] (성벽 앞면 x≈7,800)
+// 유형거 앞(끌채)은 −y. 싣고 나온 뒤 제자리에서 성벽 쪽으로 돌아선 다음 곧게 간다.
+export const CART_TURN = Math.atan2(CART_WALL[0], -(CART_WALL[1] - CART_OUT));   // 회전각(rad, z축)
+export const TURN_U = 0.3;   // 녹로 단계 앞 30%는 돌기만 함
 export const PHASES = [
   { name: 'chain', dur: 6,  caption: '받침목 위 돌 밑에 철강을 끼우고 쇠사슬을 건다' },
   { name: 'raise', dur: 14, caption: '좌우 30명이 같은 속도로 얼레를 감는다 → 돌이 약 0.65m 오른다' },
@@ -142,17 +145,22 @@ export function scene(t) {
   let rest = clamp(t, 0, SCENE_TOTAL), phaseIndex = PHASES.length - 1;
   for (let i = 0; i < PHASES.length; i++) { if (rest < PHASES[i].dur || i === PHASES.length - 1) { phaseIndex = i; break; } rest -= PHASES[i].dur; }
   const ph = PHASES[phaseIndex], u = clamp(rest / ph.dur, 0, 1), e = smooth(u);   // 마지막 순간(t = SCENE_TOTAL)은 u = 1
-  let lift = 0, cartX = 0, cartY = CART_IN, chainsOn = true, stoneOn = 'ground';
+  let lift = 0, cartX = 0, cartY = CART_IN, chainsOn = true, stoneOn = 'ground', cartRot = 0, cartDist = 0;
+  const RUN = Math.hypot(CART_WALL[0], CART_WALL[1] - CART_OUT);
   switch (ph.name) {
     case 'chain': break;
     case 'raise': lift = RAISE_H * e; stoneOn = 'hook'; break;
-    case 'cart': lift = RAISE_H; cartY = CART_IN * (1 - e); stoneOn = 'hook'; break;
-    case 'lower': lift = RAISE_H + (CART_LIFT - RAISE_H) * e; cartY = 0; stoneOn = u >= 1 ? 'cart' : 'hook'; break;
-    case 'out': lift = CART_LIFT; cartY = CART_OUT * e; chainsOn = false; stoneOn = 'cart'; break;
-    case 'nokro': lift = CART_LIFT; cartX = CART_WALL[0] * e; cartY = CART_OUT + (CART_WALL[1] - CART_OUT) * e; chainsOn = false; stoneOn = 'cart'; break;
+    case 'cart': lift = RAISE_H; cartY = CART_IN * (1 - e); cartDist = -CART_IN * e; stoneOn = 'hook'; break;
+    case 'lower': lift = RAISE_H + (CART_LIFT - RAISE_H) * e; cartY = 0; cartDist = -CART_IN; stoneOn = u >= 1 ? 'cart' : 'hook'; break;
+    case 'out': lift = CART_LIFT; cartY = CART_OUT * e; cartDist = -CART_IN - CART_OUT * e; chainsOn = false; stoneOn = 'cart'; break;
+    case 'nokro': {
+      const r = smooth(u / TURN_U), m = smooth((u - TURN_U) / (1 - TURN_U));
+      lift = CART_LIFT; cartRot = CART_TURN * r; cartX = CART_WALL[0] * m; cartY = CART_OUT + (CART_WALL[1] - CART_OUT) * m;
+      cartDist = -CART_IN - CART_OUT + RUN * m; chainsOn = false; stoneOn = 'cart'; break;
+    }
   }
   const thL = lift * 4 / R_AXLE, thR = thL;  // 좌우 같은 속도로 감음 → crane({thL,thR}).lift === lift
   // 돌의 이동량(처음 자리 기준): 매달려 있으면 [0,0,lift], 실린 뒤에는 유형거와 함께
   const stoneOff = stoneOn === 'cart' ? [cartX, cartY, CART_LIFT] : [0, 0, lift];
-  return { phase: ph.name, phaseIndex, lift, thL, thR, cartX, cartY, chainsOn, stoneOn, stoneOff, caption: ph.caption };
+  return { phase: ph.name, phaseIndex, lift, thL, thR, cartX, cartY, cartRot, cartDist, chainsOn, stoneOn, stoneOff, caption: ph.caption };
 }

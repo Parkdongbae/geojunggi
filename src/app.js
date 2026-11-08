@@ -579,10 +579,11 @@ let last = performance.now(), dirty = true, ready = false, prevLift = 0, creakT 
     const tiltAng = -st.tilt;
     P.lower = { pos: [0, 0, st.lift], ang: tiltAng, piv: [0, 0, sim.LOWER_Z0], ax: [0, 1, 0] };
     P.chainL = P.chainR = P.stone = P.bars = P.lower;
-    ['u0', 'u1', 'u2', 'u3'].forEach((k, i) => SP[k] = { ang: st.sheaveAngles[i] });
-    ['d0', 'd1', 'd2', 'd3'].forEach((k, i) => SP[k] = { ang: st.sheaveAngles[4 + i] });
-    SP.bw0 = SP.bw1 = { ang: st.bigWheelAngles[0] };
-    SP.axL = { ang: ctrl.thL }; SP.axR = { ang: ctrl.thR };
+    // 왼쪽(x<0) 부재는 오른쪽의 거울상이라 반대 방향으로 돈다
+    ['u0', 'u1', 'u2', 'u3'].forEach((k, i) => SP[k] = { ang: (i < 2 ? -1 : 1) * st.sheaveAngles[i] });
+    ['d0', 'd1', 'd2', 'd3'].forEach((k, i) => SP[k] = { ang: (i < 2 ? -1 : 1) * st.sheaveAngles[4 + i] });
+    SP.bw0 = { ang: st.bigWheelAngles[0] }; SP.bw1 = { ang: -st.bigWheelAngles[1] };
+    SP.axL = { ang: -ctrl.thL }; SP.axR = { ang: ctrl.thR };
     updRopes(st);
     updReads(st, st.perWorker(ctrl.workers));
     const winding = canW && (wind.L || wind.R);
@@ -601,14 +602,14 @@ let last = performance.now(), dirty = true, ready = false, prevLift = 0, creakT 
     const cst = sim.crane({ thL: st.thL, thR: st.thR });
     P.lower = { pos: [0, 0, st.lift] };
     P.chainL = P.chainR = P.bars = P.lower;
-    P.stone = { pos: st.stoneOff };
-    ['u0', 'u1', 'u2', 'u3'].forEach((k, i) => SP[k] = { ang: cst.sheaveAngles[i] });
-    ['d0', 'd1', 'd2', 'd3'].forEach((k, i) => SP[k] = { ang: cst.sheaveAngles[4 + i] });
-    SP.bw0 = SP.bw1 = { ang: cst.bigWheelAngles[0] };
-    SP.axL = SP.axR = { ang: st.thL };
+    P.stone = { pos: st.stoneOff, ang: st.stoneOn === 'cart' ? st.cartRot : 0, ax: [0, 0, 1], piv: [0, 0, 0] };   // 실린 돌은 유형거와 함께 돈다
+    ['u0', 'u1', 'u2', 'u3'].forEach((k, i) => SP[k] = { ang: (i < 2 ? -1 : 1) * cst.sheaveAngles[i] });
+    ['d0', 'd1', 'd2', 'd3'].forEach((k, i) => SP[k] = { ang: (i < 2 ? -1 : 1) * cst.sheaveAngles[4 + i] });
+    SP.bw0 = { ang: cst.bigWheelAngles[0] }; SP.bw1 = { ang: -cst.bigWheelAngles[1] };
+    SP.axL = { ang: -st.thL }; SP.axR = { ang: st.thR };
     updRopes(cst);
-    cartG.position.set(st.cartX, st.cartY, 0);
-    cartWheels.forEach(w => w.rotation.x = -(st.cartY + st.cartX) / 300);
+    cartG.position.set(st.cartX, st.cartY, 0); cartG.rotation.z = st.cartRot;
+    cartWheels.forEach(w => w.rotation.x = st.cartDist / 300);
     arrowG.visible = st.phase === 'nokro';
     const chOn = st.chainsOn;
     marsChainsOn = chOn;

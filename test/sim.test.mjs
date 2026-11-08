@@ -275,3 +275,16 @@ test('끝 도르래 밧줄은 위 단 좌우강에서 도르래를 넘어 아래
   assert.deepEqual(P[0], TIER_TIE.up); assert.deepEqual(P[P.length - 1], TIER_TIE.low);
   assert.ok(Math.max(...P.map(p => p[1])) > END.z + R_END - 2);   // 도르래 위로 넘어감
 });
+
+test('유형거는 싣고 나온 뒤 제자리에서 성벽 쪽으로 돌고 나서 곧게 간다', async () => {
+  const { CART_TURN, TURN_U, CART_OUT, CART_WALL } = await import('../src/sim.js');
+  const T0n = PHASES.slice(0, PHASES.findIndex(p => p.name === 'nokro')).reduce((a, p) => a + p.dur, 0), D = PHASES.find(p => p.name === 'nokro').dur;
+  const mid = scene(T0n + D * TURN_U * 0.5);
+  assert.equal(mid.cartX, 0); assert.equal(mid.cartY, CART_OUT); assert.ok(mid.cartRot > 0 && mid.cartRot < CART_TURN);
+  const go = scene(T0n + D * 0.7);
+  assert.ok(Math.abs(go.cartRot - CART_TURN) < 1e-9);
+  // 가는 방향이 유형거 앞(-y를 CART_TURN만큼 돌린 방향)과 같다
+  const dir = [CART_WALL[0], CART_WALL[1] - CART_OUT], L = Math.hypot(...dir);
+  assert.ok(Math.abs(Math.sin(CART_TURN) - dir[0] / L) < 1e-9 && Math.abs(-Math.cos(CART_TURN) - dir[1] / L) < 1e-9);
+  assert.ok(scene(T0n).cartRot === 0);
+});
